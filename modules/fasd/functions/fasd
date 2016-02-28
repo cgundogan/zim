@@ -1,7 +1,3 @@
-#!/usr/bin/env sh
-
-# Fasd (this file) can be sourced or executed by any POSIX compatible shell.
-
 # Fasd is originally written based on code from z (https://github.com/rupa/z)
 # by rupa deadwyler under the WTFPL license. Most if not all of the code has
 # been rewritten.
@@ -64,20 +60,6 @@ fasd() {
         } >> "${_FASD_SINK:-/dev/null}" 2>&1
         ;;
 
-      auto) cat <<EOS
-{ if [ "\$ZSH_VERSION" ] && compctl; then # zsh
-    eval "\$(fasd --init posix-alias zsh-hook zsh-ccomp zsh-ccomp-install \\
-      zsh-wcomp zsh-wcomp-install)"
-  elif [ "\$BASH_VERSION" ] && complete; then # bash
-    eval "\$(fasd --init posix-alias bash-hook bash-ccomp bash-ccomp-install)"
-  else # posix shell
-    eval "\$(fasd --init posix-alias posix-hook)"
-  fi
-} >> "$_FASD_SINK" 2>&1
-
-EOS
-        ;;
-
       posix-alias) cat <<EOS
 alias a='fasd -a'
 alias s='fasd -si'
@@ -101,17 +83,6 @@ alias zz='fasd_cd -d -i'
 EOS
         ;;
 
-      tcsh-alias) cat <<EOS
-;alias a 'fasd -a';
-alias s 'fasd -si';
-alias sd 'fasd -sid';
-alias sf 'fasd -sif';
-alias d 'fasd -d';
-alias f 'fasd -f';
-alias z 'cd "\`fasd -d -e printf\\ %s \\!*\`" >& /dev/null || fasd -d';
-EOS
-        ;;
-
       zsh-hook) cat <<EOS
 # add zsh hook
 _fasd_preexec() {
@@ -121,42 +92,6 @@ autoload -Uz add-zsh-hook
 add-zsh-hook preexec _fasd_preexec
 
 EOS
-        ;;
-
-      bash-hook) cat <<EOS
-_fasd_prompt_func() {
-  eval "fasd --proc \$(fasd --sanitize \$(history 1 | \\
-    sed "s/^[ ]*[0-9]*[ ]*//"))" >> "$_FASD_SINK" 2>&1
-}
-
-# add bash hook
-case \$PROMPT_COMMAND in
-  *_fasd_prompt_func*) ;;
-  *) PROMPT_COMMAND="_fasd_prompt_func;\$PROMPT_COMMAND";;
-esac
-
-EOS
-        ;;
-
-      posix-hook) cat <<EOS
-_fasd_ps1_func() {
-  { eval "fasd --proc \$(fasd --sanitize \$(fc -nl -1))"; } \\
-    >> "$_FASD_SINK" 2>&1
-}
-case \$PS1 in
-  *_fasd_ps1_func*) ;;
-  *) export PS1="\\\$(_fasd_ps1_func)\$PS1";;
-esac
-
-EOS
-        ;;
-
-      tcsh-hook) cat <<EOS
-;alias fasd-prev-cmd 'fasd --sanitize \`history -h 1\`';
-set pprecmd="\`alias precmd\`";
-alias precmd '\$pprecmd; eval "fasd --proc \`fasd-prev-cmd\`" >& /dev/null';
-EOS
-
         ;;
 
       zsh-ccomp) cat <<EOS
@@ -230,43 +165,6 @@ EOS
   fi
   unset orig_comp
 }
-
-EOS
-        ;;
-
-      bash-ccomp) cat <<EOS
-# bash command mode completion
-_fasd_bash_cmd_complete() {
-  # complete command after "-e"
-  local cur=\${COMP_WORDS[COMP_CWORD]}
-  [[ \${COMP_WORDS[COMP_CWORD-1]} == -*e ]] && \\
-    COMPREPLY=( \$(compgen -A command \$cur) ) && return
-  # complete using default readline complete after "-A" or "-D"
-  case \${COMP_WORDS[COMP_CWORD-1]} in
-    -A|-D) COMPREPLY=( \$(compgen -o default \$cur) ) && return;;
-  esac
-  # get completion results using expanded aliases
-  local RESULT=\$( fasd --complete "\$(alias -p \$COMP_WORDS \\
-    2>> "$_FASD_SINK" | sed -n "\\\$s/^.*'\\\\(.*\\\\)'/\\\\1/p")
-    \${COMP_LINE#* }" | while read -r line; do
-      quote_readline "\$line" 2>/dev/null || \\
-        printf %q "\$line" 2>/dev/null  && \\
-        printf \\\\n
-    done)
-  local IFS=\$'\\n'; COMPREPLY=( \$RESULT )
-}
-_fasd_bash_hook_cmd_complete() {
-  for cmd in \$*; do
-    complete -F _fasd_bash_cmd_complete \$cmd
-  done
-}
-
-EOS
-        ;;
-
-      bash-ccomp-install) cat <<EOS
-# enable bash command mode completion
-_fasd_bash_hook_cmd_complete fasd a s d f sd sf z zz
 
 EOS
         ;;
