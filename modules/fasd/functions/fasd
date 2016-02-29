@@ -31,9 +31,14 @@ case $1 in
   while [ "$1" ]; do
     case $1 in
       env)
-        { # source rc files if present
-        [ -s "/etc/fasdrc" ] && . "/etc/fasdrc"
-        [ -s "$HOME/.fasdrc" ] && . "$HOME/.fasdrc"
+        { # Load configuration files
+
+        if [[ -s ${XDG_CONFIG_HOME:-"${HOME}/.config"}/fasd/config ]]; then
+          source ${XDG_CONFIG_HOME:-"${HOME}/.config"}/fasd/config
+        else
+          [[ -s /etc/fasdrc ]] && source /etc/fasd
+          [[ -s ${HOME}/.fasdrc ]] && source ${HOME}/.fasdrc
+        fi
 
         # set default options
         [ -z "$_FASD_DATA" ] && _FASD_DATA="$HOME/.fasd"
