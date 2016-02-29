@@ -1,3 +1,5 @@
+fasd --init env
+
 alias a='fasd -a'
 alias s='fasd -si'
 alias sd='fasd -sid'
